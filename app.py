@@ -5,10 +5,25 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 import yfinance as yf
+import requests
 from datetime import timedelta, date, datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from io import StringIO
+
+def _yf(ticker: str) -> yf.Ticker:
+    """Return a yfinance Ticker with a browser-like session to avoid cloud rate limits."""
+    s = requests.Session()
+    s.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+    })
+    return yf.Ticker(ticker, session=s)
 
 # ─── Strategy Persistence ──────────────────────────────────────────────────────
 
@@ -143,7 +158,7 @@ def parse_csv(raw: bytes) -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def get_trading_days(ticker: str, start: date, end: date) -> list[date]:
     """Return all trading days for a ticker in [start, end]."""
-    hist = yf.Ticker(ticker).history(
+    hist = _yf(ticker).history(
         start=start, end=end + timedelta(days=1), interval="1d", auto_adjust=True
     )
     return sorted(d.date() for d in hist.index)
@@ -196,7 +211,7 @@ def fetch_extended_window(ticker: str, rec_date: date, next_day: date) -> tuple[
     else:
         return pd.DataFrame(), "no ext. data (>60 days)"
 
-    t = yf.Ticker(ticker)
+    t = _yf(ticker)
     for res in res_order:
         try:
             data = t.history(
@@ -245,7 +260,7 @@ def fetch_day_data(ticker: str, target: date) -> tuple[pd.DataFrame, str]:
     else:
         res_order = ["1d"]
 
-    t = yf.Ticker(ticker)
+    t = _yf(ticker)
     for res in res_order:
         try:
             data = t.history(
@@ -277,8 +292,8 @@ def fetch_day_data(ticker: str, target: date) -> tuple[pd.DataFrame, str]:
 @st.cache_data(show_spinner=False)
 def fetch_market_regimes(start: date, end: date) -> pd.DataFrame:
     """Returns DataFrame indexed by date with columns: spy_ret (%), vix_close."""
-    spy = yf.Ticker("SPY").history(start=start, end=end + timedelta(days=2), interval="1d", auto_adjust=True)
-    vix = yf.Ticker("^VIX").history(start=start, end=end + timedelta(days=2), interval="1d", auto_adjust=True)
+    spy = _yf("SPY").history(start=start, end=end + timedelta(days=2), interval="1d", auto_adjust=True)
+    vix = _yf("^VIX").history(start=start, end=end + timedelta(days=2), interval="1d", auto_adjust=True)
     for _h in [spy, vix]:
         if _h.index.tz is not None:
             _h.index = _h.index.tz_localize(None)
@@ -292,7 +307,7 @@ def fetch_market_regimes(start: date, end: date) -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def fetch_buy_hold(ticker: str, start: date, end: date, initial_capital: float):
     """Daily close prices scaled to initial_capital from start date."""
-    hist = yf.Ticker(ticker).history(
+    hist = _yf(ticker).history(
         start=start, end=end + timedelta(days=2), interval="1d", auto_adjust=True
     )
     if hist.empty:
