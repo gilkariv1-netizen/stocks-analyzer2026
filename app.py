@@ -157,11 +157,11 @@ def parse_csv(raw: bytes) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def get_trading_days(ticker: str, start: date, end: date) -> list[date]:
-    """Return all trading days for a ticker in [start, end]."""
-    hist = _yf(ticker).history(
-        start=start, end=end + timedelta(days=1), interval="1d", auto_adjust=True
-    )
-    return sorted(d.date() for d in hist.index)
+    """Return NYSE trading days in [start, end] — no API call needed."""
+    import pandas_market_calendars as mcal
+    nyse = mcal.get_calendar("NYSE")
+    sched = nyse.schedule(start_date=start, end_date=end)
+    return [d.date() for d in sched.index]
 
 
 @st.cache_data(show_spinner=False)
