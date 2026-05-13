@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m streamlit run app.py --server.headless true)",
+      "Bash(curl -s http://localhost:8501)",
+      "Bash(kill %1)",
+      "Bash(ps -p 94061 -o pid,etime,command)",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('app.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python3 -m pip install openpyxl)",
+      "Bash(ps -p 94061 -o pid,etime,command --no-headers)",
+      "Bash(kill -9 94061)",
+      "Bash(pkill -f \"streamlit\")",
+      "Bash(python3 -m streamlit run app.py --server.headless true --browser.gatherUsageStats false)",
+      "Read(//private/tmp/**)"
+    ]
+  }
+}
